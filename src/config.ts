@@ -1,62 +1,33 @@
 import type { SanitizeConfig, SanitizeContext } from './types';
 
-// ---------------------------------------------------------------------------
-// Shared building blocks
-// ---------------------------------------------------------------------------
-
 const SAFE_PROTOCOLS = ['http:', 'https:', 'mailto:'];
+const GLOBAL_ATTRS = ['class', 'id', 'dir', 'lang', 'title'];
 
-/** Attributes that are safe on any tag. */
-const GLOBAL_SAFE_ATTRS = ['class', 'id', 'dir', 'lang', 'title'];
-
-/** URL-carrying attributes that require protocol validation. */
-export const URL_ATTRIBUTES = ['href', 'src', 'action', 'formaction', 'xlink:href', 'cite'];
-
-// ---------------------------------------------------------------------------
-// article — widest allowlist
-// Represents a full CMS rich-text article authored by an employee or admin.
-// Allows headings, tables, images, and links because all are product features.
-// ---------------------------------------------------------------------------
+// article — full CMS rich-text. Widest allowlist: headings, tables, images, links.
 const ARTICLE_CONFIG: SanitizeConfig = {
   allowedTags: [
-    // Structure
     'div', 'section', 'article', 'aside', 'main', 'header', 'footer',
-    // Text blocks
     'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre',
-    // Inline formatting
     'span', 'a', 'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'sup', 'sub',
     'code', 'kbd', 'mark', 'small',
-    // Lists
     'ul', 'ol', 'li', 'dl', 'dt', 'dd',
-    // Tables (needed for structured content)
     'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
-    // Media
     'img', 'figure', 'figcaption',
-    // Other
     'br', 'hr',
   ],
   allowedAttributes: {
-    // Global
-    '*': GLOBAL_SAFE_ATTRS,
-    // Links — href is validated separately by url-validator hook
+    '*': GLOBAL_ATTRS,
     'a': ['href', 'target', 'rel'],
-    // Images — src is validated separately
     'img': ['src', 'alt', 'width', 'height', 'loading'],
-    // Tables
     'td': ['colspan', 'rowspan'],
     'th': ['colspan', 'rowspan', 'scope'],
     'col': ['span', 'width'],
   },
   allowedProtocols: SAFE_PROTOCOLS,
-  stripComments: true,
   maxInputLength: 500_000,
 };
 
-// ---------------------------------------------------------------------------
-// chat — moderate allowlist
-// Inline messaging. No block layout, no images, no tables.
-// Employees send messages; attackers may probe this surface more aggressively.
-// ---------------------------------------------------------------------------
+// chat — inline messaging. No images, no tables, no block layout.
 const CHAT_CONFIG: SanitizeConfig = {
   allowedTags: [
     'p', 'span', 'br',
@@ -70,40 +41,29 @@ const CHAT_CONFIG: SanitizeConfig = {
     'a': ['href', 'target', 'rel'],
   },
   allowedProtocols: SAFE_PROTOCOLS,
-  stripComments: true,
   maxInputLength: 10_000,
 };
 
-// ---------------------------------------------------------------------------
-// notification — tightest allowlist (plain text only)
-// Push notifications and in-app banners are rendered as plain text in mobile
-// OS notification trays. Any markup is stripped entirely.
-// ---------------------------------------------------------------------------
+// notification — push / in-app banners rendered as plain text in mobile OS trays.
 const NOTIFICATION_CONFIG: SanitizeConfig = {
   allowedTags: [],
   allowedAttributes: {},
   allowedProtocols: [],
-  stripComments: true,
   maxInputLength: 500,
 };
 
-// ---------------------------------------------------------------------------
-// email — email digest renderer
-// Tables are required for email layout; images are common. No scripts/iframes.
-// The wider allowlist is acceptable because emails render in isolated webviews.
-// ---------------------------------------------------------------------------
+// email — HTML email digest. Tables and inline styles required for mail-client layout.
 const EMAIL_CONFIG: SanitizeConfig = {
   allowedTags: [
     'div', 'p', 'span', 'br', 'hr',
     'h1', 'h2', 'h3', 'h4',
     'b', 'strong', 'i', 'em', 'u', 's',
-    'a',
-    'img',
+    'a', 'img',
     'ul', 'ol', 'li',
     'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
   ],
   allowedAttributes: {
-    '*': [...GLOBAL_SAFE_ATTRS, 'style', 'align', 'valign', 'bgcolor', 'width', 'height'],
+    '*': [...GLOBAL_ATTRS, 'style', 'align', 'valign', 'bgcolor', 'width', 'height'],
     'a': ['href', 'target', 'rel'],
     'img': ['src', 'alt', 'width', 'height', 'border'],
     'td': ['colspan', 'rowspan'],
@@ -111,13 +71,8 @@ const EMAIL_CONFIG: SanitizeConfig = {
     'table': ['cellpadding', 'cellspacing', 'border'],
   },
   allowedProtocols: SAFE_PROTOCOLS,
-  stripComments: true,
   maxInputLength: 200_000,
 };
-
-// ---------------------------------------------------------------------------
-// Registry
-// ---------------------------------------------------------------------------
 
 const CONFIGS: Record<SanitizeContext, SanitizeConfig> = {
   article: ARTICLE_CONFIG,
